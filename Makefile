@@ -1,9 +1,14 @@
 CC?=gcc
-CFLAGS?=-g -O1
-#LDFLAGS?=-nostdlib
-#LDFLAGS?=-nostdlib
+CFLAGS?=-g -O3
+LDFLAGS?=
 
-main: main.o hello-world.o
+
+all: main random-matrix-generator
+
+main: main.o hello-world.o matrix.o timer.o
+	gcc $(LDFLAGS) -o $@  $^
+
+random-matrix-generator: random-matrix-generator.o
 	gcc $(LDFLAGS) -o $@  $^
 
 %.o: %.S
@@ -15,4 +20,4 @@ main: main.o hello-world.o
 clean:
 	rm -f main *.o
 
-.PHONY: clean
+.PHONY: clean all
