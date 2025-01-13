@@ -6,5 +6,6 @@ in with pkgs; pkgs.mkShell{
     gdb
     mkl
     linuxPackages.perf
+    valgrind   
   ];
 }

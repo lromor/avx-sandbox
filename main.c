@@ -7,23 +7,40 @@
 
 extern void hello_world(void);
 
+/* extern void avx_dor_prod(double *v1, double *v2, size_t size); */
+/* extern float c[8]; */
+
+// Perform 8 values-optimized dot product of two vectors.
+// Since cache lines are usually of size 64-bytes, we can't do better than that.
+extern double avx512_8v_dot_product_asm(double *v1, double *v2, size_t count);
+
+static inline double dot_product_naive(double *v1, double *v2, size_t count) {
+  double acc = 0;
+  for (int i = 0; i < count; ++i) {
+    acc += v1[i] * v2[i];
+  }
+  return acc;
+}
+
 // Matrix multiplication: c = a @ b.T, where b.T is b tranpose.
 void mm_multiply_naive(struct matrix *a, struct matrix *b_t, struct matrix *c){
   // Start mm_multiplication.
   double *dst = NULL;
-  double src_a;
-  double src_b;
+  double *src_a;
+  double *src_b;
   // index notation <matrix-prefix><row or column>
   // For instance index cc = matrix c, column.
   for (int cr = 0; cr < c->rows; ++cr) {
     for (int cc = 0; cc < c->columns; ++cc) {
       // Move to next destination.
       dst = &c->data[cc + cr * c->columns];
-      for (int v = 0; v < a->columns; ++v) {
-        src_a = a->data[cr * a->columns + v];
-        src_b = b_t->data[cc * b_t->columns + v];
-        *dst += src_a * src_b;
-      }
+      src_a = &a->data[cr * a->columns];
+      src_b = &b_t->data[cc * b_t->columns];
+#if USE_AVX_DOT_PRODUCT_ASM
+      *dst = avx512_8v_dot_product_asm(src_a, src_b, a->columns);
+#else
+      *dst = dot_product_naive(src_a, src_b, a->columns);
+#endif
     }
   }
 }
