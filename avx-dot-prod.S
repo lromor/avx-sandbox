@@ -3,6 +3,10 @@
   .global avx512_8v_dot_product_asm
   .type avx512_8v_dot_product_asm, @function
 avx512_8v_dot_product_asm:
+  # Prologue
+  pushq %rbp
+  movq %rsp, %rbp
+
   # Since all function arguments are less or equal than 8 bytes
   # and we only have 3 arguments, their values is already present
   # in each argument register.
@@ -24,37 +28,58 @@ avx512_8v_dot_product_asm:
   # for %rax times, perform the 8x8 and accumulate step.
   # Registers:
   # - r8: counter
-  # - r9: final value accumulator.
+  # - r9: mask.
   # - r10: pointer to next 8 doubles for v1.
   # - r11: pointer to next 8 doubles for v2.
 
   # Init accumulator and counter.
   mov $0, %r8
-  mov $0, %r9
+  mov $0xffff, %r9
+  kmovq %r9, %k1
+  mov %rdi, %r10
+  mov %rsi, %r11
+
+  # Zero out the accumulator
   vxorpd %zmm2, %zmm2, %zmm2
   jmp .LOOP_CMP
-.LOOP_BODY:
-  # Compute the next 8-doubles addresses.
-  mov %r8, %r10
-  shl $6, %r10
-  add %rdi, %r10
-  mov %r8, %r11
-  shl $6, %r11
-  add %rsi, %r11
 
+.LOOP_BODY:
   # load them into mmx registers
-  vmovapd (%r10), %zmm0
-  vmovapd (%r11), %zmm1
+  vmovapd (%r10), %zmm0 {%k1}{z}
+  vmovapd (%r11), %zmm1 {%k1}{z}
 
   # Multiply zmm0 and zmm1, store result in zmm0
   # Run fused multiply add zmm2 = (zmm0 * zmm1) + zmm2, for each 8 doubles.
   vfmadd231pd %zmm0, %zmm1, %zmm2
 
+  # Increment to next 8-doubles addresses.
+  add $64, %r10
+  add $64, %r11
+
   # Increment index.
   add $1, %r8
+
 .LOOP_CMP:
   cmpq %rax, %r8
   jb .LOOP_BODY
+
+  ;; # Deal with reminder, if it's zero, skip to ACCUMULATE.
+  ;; # test %rdx, %rdx
+  ;; # jz .ACCUMULATE
+
+  ;; # use rdx (cl points to lower 8 bits) as mask
+  ;; # mov $1, %r9
+  ;; # shlx %rdx, %r9, %r9
+  ;; # dec %r9
+  ;; # mov $1, %rax
+  ;; # mov $0, %r8
+  ;; # kmovq %r9, %k1
+
+  ;; ;; # Set remainder to 0 and increment index.
+  ;; # mov $0, %rdx
+  ;; # jmp .LOOP_BODY
+
+.ACCUMULATE:
   # Accumulate final value
   vextractf64x4  $0, %zmm2, %ymm1     # ymm1 = { d0, d1, d2, d3 }
   vextractf64x4  $1, %zmm2, %ymm0     # ymm0 = { d4, d5, d6, d7 }
@@ -67,8 +92,10 @@ avx512_8v_dot_product_asm:
   vpermilpd $0b00000001, %xmm3, %xmm2 # xmm2 = swap double [1] <-> [0]
   vaddsd %xmm2, %xmm3, %xmm3          # xmm3[0] = p0 + p1, [1] is now duplicate
   vmovsd %xmm3, %xmm0, %xmm0
-  ret
 
+  # Epilogue.
+  popq %rbp
+  ret
 #if defined(__linux__) && defined(__ELF__)
   .section .note.GNU-stack,"",%progbits
 #endif

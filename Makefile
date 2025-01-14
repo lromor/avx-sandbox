@@ -2,9 +2,9 @@ CC?=gcc
 CFLAGS?=-g -O3 -fopt-info-vec -DUSE_ALIGNED_MEMORY -DUSE_AVX_DOT_PRODUCT_ASM
 LDFLAGS?=
 
-all: main random-matrix-generator
+all: mmm random-matrix-generator
 
-main: main.o hello-world.o matrix.o timer.o avx-dot-prod.o
+mmm: mmm.o hello-world.o matrix.o timer.o avx-dot-prod.o
 	gcc $(LDFLAGS) -o $@  $^
 
 random-matrix-generator: random-matrix-generator.o
@@ -17,6 +17,6 @@ random-matrix-generator: random-matrix-generator.o
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 clean:
-	rm -f main *.o
+	rm -f mmm random-matrix-generator *.o
 
 .PHONY: clean all

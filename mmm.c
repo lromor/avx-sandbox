@@ -7,9 +7,6 @@
 
 extern void hello_world(void);
 
-/* extern void avx_dor_prod(double *v1, double *v2, size_t size); */
-/* extern float c[8]; */
-
 // Perform 8 values-optimized dot product of two vectors.
 // Since cache lines are usually of size 64-bytes, we can't do better than that.
 extern double avx512_8v_dot_product_asm(double *v1, double *v2, size_t count);
@@ -56,6 +53,16 @@ struct mm_op_args {
 void mm_binary_op_bench(const char *name, mm_op op, struct mm_op_args args, FILE *stream) {
   struct time_point start;
   struct time_point end;
+  fprintf(
+      stream,
+      "mmm: (%zu, %zu) @ (%zu, %zu) = (%zu, %zu)\n",
+      args.a->rows,
+      args.a->columns,
+      args.b_t->rows,
+      args.b_t->columns,
+      args.c->rows,
+      args.c->columns);
+
   time_point_now(&start);
   op(args.a, args.b_t, args.c);
   time_point_now(&end);
@@ -120,6 +127,8 @@ static struct option long_options[] = {
   {0, 0, 0, 0},
 };
 
+static inline int isp2(unsigned int n) { return (n > 0) && ((n & (n - 1)) == 0); }
+
 int main(int argc, char *argv[]) {
   int opt;
   while ((opt = getopt_long(argc, argv, "h", long_options, NULL)) != -1) {
@@ -152,6 +161,22 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  // Check shapes are correct.
+  const unsigned a_columns = a->columns;
+  if (!isp2(a_columns)) {
+    fprintf(stderr, "first matrix columns is not a power of 2\n");
+    return 1;
+  }
+  const unsigned b_columns = b_t->columns;
+  if (!isp2(a_columns)) {
+    fprintf(stderr, "second matrix columns is not a power of 2\n");
+    return 1;
+  }
+  if (a_columns != b_columns) {
+    fprintf(stderr, "matrices must have same columns: %d != %d\n", a_columns, b_columns);
+    return 1;
+  }
+
   struct matrix *c = matrix_create(a->rows, b_t->rows);
   memset(c->data, 0, c->size);
 
@@ -166,11 +191,4 @@ int main(int argc, char *argv[]) {
   print_matrix(b_t, stdout);
   print_matrix(c, stdout);
 #endif
-
-  //hello_world();
-  //test();
-  /* printf("Hello World main\n"); */
-  /* hello_world(); */
-  /* hello_world(); */
-  /* hello_world(); */
 }
