@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
     .b_t = b_t,
     .c = c,
   };
-  mm_binary_op_bench("naive", &mm_multiply_naive, args, stdout);
+  mm_binary_op_bench("mmm", &mm_multiply_naive, args, stdout);
 #if 0
   print_matrix(a, stdout);
   print_matrix(b_t, stdout);

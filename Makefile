@@ -4,7 +4,7 @@ LDFLAGS?=
 
 all: mmm random-matrix-generator
 
-mmm: mmm.o hello-world.o matrix.o timer.o avx-dot-prod.o
+mmm: mmm.o matrix.o timer.o avx-dot-prod.o
 	gcc $(LDFLAGS) -o $@  $^
 
 random-matrix-generator: random-matrix-generator.o
