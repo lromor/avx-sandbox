@@ -1,20 +1,25 @@
 { pkgs ? import <nixpkgs> { } }:
 let
+  llvm = pkgs.llvmPackages_19;
   packages = with pkgs; [
     pkg-config
-    gcc13
-    llvmPackages_19.clang-tools
+    (llvm.clang-tools.override {
+      # Annoying situation with nvcc defining in a broken way noinline
+      # which then breaks libstdc++. Use libc++ so we don't get that error.
+      enableLibcxx = true;
+    })
+    llvm.clang-tools
+    llvm.clang
+    cudaPackages.cudatoolkit
     bear
     gdb
     mkl
     linuxPackages.perf
     valgrind
-    cudaPackages.cuda_nvprof
-    cudaPackages.cuda_gdb
-    cudaPackages.cuda_nvcc
-    cudaPackages.cuda_cudart
   ];
-in with pkgs; pkgs.mkShell{
+in with pkgs; (mkShell.override { stdenv = stdenv; }) {
   packages = packages;
-  CPATH = lib.makeSearchPathOutput "dev" "include" packages;
+  stdenv = stdenv;
+  CUDA_PATH = "${pkgs.cudaPackages.cudatoolkit}";
+  #CPATH = lib.makeSearchPathOutput "dev" "include" packages;
 }

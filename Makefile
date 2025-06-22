@@ -1,8 +1,8 @@
 CC?=clang
 CXX?=clang++
 NVCC?=nvcc
-CFLAGS?=-g -O3 -march=native -fopt-info-vec -DUSE_ALIGNED_MEMORY #-DUSE_AVX_DOT_PRODUCT_ASM
-LDFLAGS?=
+CFLAGS?=-g -O3 -march=native -DUSE_ALIGNED_MEMORY #-DUSE_AVX_DOT_PRODUCT_ASM
+LDFLAGS?=-std=c++20
 
 all: mmm random-matrix-generator mmm-cuda
 
@@ -22,7 +22,7 @@ mmm-cuda: mmm-cuda.o
 	$(CC) $(CFLAGS) -c $^ -o $@
 
 %.o: %.cu
-	$(NVCC) -c $^ -o $@
+	$(NVCC) -c $^ -o $@ --gpu-architecture=sm_90
 
 clean:
 	rm -f mmm random-matrix-generator *.o

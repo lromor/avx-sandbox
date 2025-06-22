@@ -1,5 +1,9 @@
 *.dat
 *.o
 mmm
+mmm-cuda
 random-matrix-generator
 data/
+.cache
+.envrc
+.direnv
